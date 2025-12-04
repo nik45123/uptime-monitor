@@ -1,26 +1,52 @@
+# app/core/scheduler.py
 import asyncio
-from app.core.checker import ping_url 
+import time
 from app.core.db import save_log
+import httpx
 
-# In memory store for demonstration
-LOGS = []
+# -------------------------------
+# List of URLs to monitor
+# -------------------------------
+URLS = [
+    "https://google.com",
+    "https://github.com"
+    # Add more URLs here
+]
 
-# List of URLS to monitor
-URLS = ["https://www.google.com", "https://www.github.com", "https://www.npmjs.com"]
-
-
-async def schedule_checker(url: str, interval: int=60):
+# -------------------------------
+# Check a single URL
+# -------------------------------
+async def check_url(url: str) -> dict:
     """
-    Periodically ping all URL's every "interval" seconds and store results in LOGS
+    Check the status and latency of a URL.
+    Returns a dict with url, status, latency, and timestamp.
+    """
+    start = time.time()
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            r = await client.get(url)
+        status = "UP" if r.status_code == 200 else "DOWN"
+    except Exception:
+        status = "DOWN"
+    latency = round(time.time() - start, 2)
+    return {
+        "url": url,
+        "status": status,
+        "latency": latency,
+        "timestamp": time.time()
+    }
+
+# -------------------------------
+# Scheduler to periodically check all URLs
+# -------------------------------
+async def schedule_checker():
+    """
+    Continuously checks all URLs every 10 seconds
+    and saves results to the database.
     """
     while True:
         for url in URLS:
-            result = await ping_url(url)
-            LOGS.append(result)
-            await save_log(result) # persist in DB            
-            if len(LOGS) > 100: # Keep last 100 logs
-                LOGS.pop(0)
-        await asyncio.sleep(interval)
-
-    
- 
+            result = await check_url(url)
+            # Save log to SQLite in a thread to avoid blocking event loop
+            await asyncio.to_thread(save_log, result)
+        await asyncio.sleep(10)  # interval between checks
