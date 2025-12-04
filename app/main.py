@@ -11,7 +11,7 @@ import time
 # -------------------------------
 # FastAPI app
 # -------------------------------
-app = FastAPI(title="Meow Monitor", version="0.2.0")
+app = FastAPI(title="Uptime Monitor", version="0.2.0")
 
 # -------------------------------
 # Health response model
