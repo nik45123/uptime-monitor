@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from app.core.scheduler import schedule_checker, LOGS
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import asyncio
 import time
@@ -47,3 +48,6 @@ async def status():
 async def startup_event():
     # start the background checker
     asyncio.create_task(schedule_checker("https://www.google.com", interval=5))
+
+
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
